@@ -1,0 +1,268 @@
+#+title: Gd_script
+
+* Player.gd
+
+#+begin_src gdscript
+extends CharacterBody3D
+
+signal coin_collected
+
+@export_subgroup("Components")
+@export var view: Node3D
+
+@export_subgroup("Properties")
+@export var movement_speed = 250
+@export var jump_strength = 7
+
+var movement_velocity: Vector3
+var rotation_direction: float
+var gravity = 0
+
+var previously_floored = false
+
+var jump_single = true
+var jump_double = true
+
+var coins = 0
+
+@onready var particles_trail = $ParticlesTrail
+@onready var sound_footsteps = $SoundFootsteps
+@onready var model = $Character
+@onready var animation = $Character/AnimationPlayer
+
+#+end_src
+
+These are pretty standard variables. Of note are the @export_subgroup. The compoennts and properties create new areas in the inspector to differentiate different types of variables that are editable in the inspector.
+
+Some of these don't have any typing, so ideally, I would go back and add `: int` for some of them or `: bool` as needed.
+
+The @onready variables all link to particular nodes in the player scene.
+
+These variables are defined at a global level and can be updated/called from anywhere in the code.
+
+While these do not have it, there's also an option to use := which will have Godot try to figure out the type of the variable. This is used some later, but figured it was worth mentioning here.
+
+#+begin_src gdscript
+
+# Functions
+
+func _physics_process(delta):
+
+	# Handle functions
+
+	handle_controls(delta)
+	handle_gravity(delta)
+
+	handle_effects()
+
+	# Movement
+
+	var applied_velocity: Vector3
+
+	applied_velocity = velocity.lerp(movement_velocity, delta * 10)
+	applied_velocity.y = -gravity
+
+	velocity = applied_velocity
+	move_and_slide()
+#+end_src
+
+The physics_process function is called multiple times a frame, but less than the proces function. It's handy if you need to interact with the physics system. delta is essentially a very small value and is related to the time between calls of the _physics_process (I believe). This small number is often multiplied with changes to velocity but not directly with velocity. This is used to make the movement consistent instead of it being frame dependent. velocity already takes delta into account as does move_and_slide
+
+Handle controls, gravity and effects are all below, more on those then.
+
+`lerp` is about interpolating betwen the two values. Meaning it's a gradual change betwen them. This is changing the current velocity to movement_velocity at a rate of 10 * delta.
+
+After that, gravity is being applied. the - is getting the inverse value. Since the current value is positive, this will result in a negative y value. This is because going down in Godot is a negative on the y axis.
+
+
+movement_velocity is updated via the handle_controls fucntion.
+
+`velocity` is a property of the CharacterBody3D node. applied_velocity is a variable that is used to store the velocity value before velocity is set to that value with the `velocity = applied_velocity` line
+
+It's also important to note that velocity returns a Vector2 or Vector3 depending on the use case. In This case, a Vector3. You can access specific elements by using `velocity.x` or `velocity.y` or in 3d like this project, `velocity.z`
+
+Velocity and position are divded into x, y and z in a 3d project. Y is the vertical movement, jumping, gravity. X and Z are the two horizontal axis.
+
+This all updates the velocity itself. But move_and_slide is called to actually use that velocity. Without `move_and_slide` none of this movement occurs. `move_and_slide` also provides other functionality that can be found in the docs.
+
+
+#+begin_src gdscript
+
+	# ROTATION
+
+	if Vector2(velocity.z, velocity.x).length() > 0:
+		rotation_direction = Vector2(velocity.z, velocity.x).angle()
+
+	rotation.y = lerp_angle(rotation.y, rotation_direction, delta * 10)
+
+	# Falling/respawning
+
+	if position.y < -10:
+		get_tree().reload_current_scene()
+
+	# Animation for scale (jumping and landing)
+#+end_src
+
+The first if statement is checking to see if the character is moving on the X or Z access. If the character is moving, then rotation_direction is updated using the angle of the x and z velocity.
+
+`Position` here is another property of the CharacterBody3d. The position.y < -10 will check if the character is too far under the stage and reload the scene if it is.
+
+It's important to make sure that no part of the level goes below this point if using this particular method of resetting the level. Otherwise a player could get frustrated when an area they have to go is below that point.
+
+
+#+begin_src gdscript
+  # Animation for scale (jumping and landing)
+
+    model.scale = model.scale.lerp(Vector3(1, 1, 1), delta * 10)
+
+	# Animation when landing
+particles_trail
+	if is_on_floor() and gravity > 2 and !previously_floored:
+		model.scale = Vector3(1.25, 0.75, 1.25)
+		Audio.play("res://sounds/land.ogg")
+
+	previously_floored = is_on_floor()
+
+# Handle animation(s)
+
+#+end_src
+
+The model scalling is going from the current scale towards vector3 (1,1,1) which is the normal scale. The next if adjusts it
+
+
+The if here is seeing if the player just landed. the previously_floored is updated multiple times a frame. This is done to make sure it doesn't keep playing the audio and scaling the model. When the if statement condition is true, the model scaling will chanmge and then start lerping back towards 1,1,1. This will also play the audio file land.ogg
+
+
+#+begin_src gdscript
+
+
+func handle_effects():
+
+	particles_trail.emitting = false
+	sound_footsteps.stream_paused = true
+
+	if is_on_floor():
+		if abs(velocity.x) > 1 or abs(velocity.z) > 1:
+			animation.play("walk", 0.5)
+			particles_trail.emitting = true
+			sound_footsteps.stream_paused = false
+		else:
+			animation.play("idle", 0.5)
+	else:
+		animation.play("jump", 0.5)
+
+#+end_src
+`handle_effects` was called in the _physics_process function. It's at first setting the `particles_trail.emitting` to false, because in the editor it's true. It's also pausing the sound_footsteps.
+
+This is meant to be used when the player stops moving. That way they will stop emitting particles and they will stop making the footstep sounds.
+
+After this, the code checks if the player is on the floor (true or false) then has another if statement to check if the player is moving on the X or Z axis.
+If the player is moving, the animation is played, the particles trail turns on and the footsteps sound is playing.
+
+If the player isn't moving, the idle animation plays
+If the player is not on the ground, the jump animation plays. In a more elaborate setup, there may also be a falling animation after the peak of the jump.
+
+
+#+begin_src gdscript
+# Handle movement input
+func handle_controls(delta):
+	# Movement
+	var input := Vector3.ZERO
+	input.x = Input.get_axis("move_left", "move_right")
+	input.z = Input.get_axis("move_forward", "move_back")
+	input = input.rotated(Vector3.UP, view.rotation.y).normalized()
+	movement_velocity = input * movement_speed * delta
+
+	# Jumping
+	if Input.is_action_just_pressed("jump"):
+
+		if jump_single or jump_double:
+			Audio.play("res://sounds/jump.ogg")
+
+		if jump_double:
+
+			gravity = -jump_strength
+
+			jump_double = false
+			model.scale = Vector3(0.5, 1.5, 0.5)
+
+		if(jump_single): jump()
+
+#+end_src
+
+`handle_controls(delta)` is what actually gets the input from the player and updates the velocity.
+
+'move_left', 'move_right', 'move_forward', and 'move_back' were all setup in the project settings using the input tab.
+
+Input.get_axis is pretty common to get two directions. In 2D games, I know there's also an Input.get_vector, I am unsure if this would have worked in 3d.
+
+The idea here, is you shouldn't be able to move left AND right at the same time or forward and backward at the same time. So this is getting a positive or neagtive value for X or y then using that in `movement_velocity = input * movement_speed * delta`
+
+I have to look into `input.rotated(Vector3.UP, view.rotation.y).normalized()` further to see what I can understand about that.
+
+I understand .rootated() is being used to change the rotation and that Vector3.UP, view.rotation.y is being used to supply the value. And that is then being normalized, but I have to better understand how this is rotating the character.
+
+
+Finally, Input.is_action_just_pressed is used to check that an action was pressed, there is also is_action_pressed, but that's really more for holding down buttons.
+
+The if statement just checks that that jump_double or jump_single is currently true, if so it plays the sound, then it checks to see if this is a single or double jump. If double jump, it will execute the code here, if a single jump it will execute the jump() function.
+
+The double jump code is exactly the same as it is in the jump() function, except it's going and setting jump_double to false. The rest of this code is described when discussing the jump() function.
+
+
+#+begin_src gdscript
+
+
+# Handle gravity
+
+func handle_gravity(delta):
+
+	gravity += 25 * delta
+
+	if gravity > 0 and is_on_floor():
+
+		jump_single = true
+		gravity = 0
+
+# Jumping
+
+func jump():
+
+	gravity = -jump_strength
+
+	model.scale = Vector3(0.5, 1.5, 0.5)
+
+	jump_single = false;
+	jump_double = true;
+
+# Collecting coins
+
+func collect_coin():
+
+	coins += 1
+
+	coin_collected.emit(coins)
+
+#+end_src
+The gravity function is interesting. The first part constantly adds 25*delta to gravity while the if statement below isn't true. Meaning, it as the jump is taking place, more and more gravity should be appllied and you should see a greater negative velocity.y
+
+If gravity is greater than 0, which outside of this if statement it would be and the character is on the floor, the gravity is set to 0 and jump_single is set to true, I don't often see a jump_single but jump_double is much more common. This is essentially reseting the jump_single after the character is back on the floor.
+
+It's also intersting to note how this and the jump function below work. Gravity is being called as `-gravity` in the _physics_process function above. So while this 25*delta is being added to gravity, it results in a negative number during the _physics_process.
+
+Likewise, the jump_strength is 7, but here's it being made negative. In the _physics_process it's called -gravity. Meaning we have:
+
+`gravity = -jump_strength`
+or
+`gravity = -7`
+
+then:
+`applied_velocity.y = -gravity`
+
+In other words:
+`applied_velocity.y = -(-7)` or simply `applied_velocity = 7`
+
+
+The `Jump()` function also adjusts the model scale and sets jump_single to false and preps for jump_double. Nice way to make sure you have already made the first jump.
+
+`coin_collected()` is a simple call that adds 1 to coins and emits the coin_collected signal. It also provides the value of coins. This ties into the UI to update the value there.
