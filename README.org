@@ -32,7 +32,7 @@ var coins = 0
 
 #+end_src
 
-These are pretty standard variables. Of note are the @export_subgroup. The compoennts and properties create new areas in the inspector to differentiate different types of variables that are editable in the inspector.
+These are pretty standard variables. Of note are the `@export_subgroup`. The compoennts and properties create new areas in the inspector to differentiate different types of variables that are editable in the inspector.
 
 Some of these don't have any typing, so ideally, I would go back and add `: int` for some of them or `: bool` as needed.
 
