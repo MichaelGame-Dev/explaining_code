@@ -38,7 +38,7 @@ Some of these don't have any typing, so ideally, I would go back and add ~: int~
 
 The @onready variables all link to particular nodes in the player scene.
 
-These variables are defined at a global level and can be updated/called from anywhere in the code.
+These variables are defined at a global level and can be updated/called from anywhere in the player script.
 
 While these do not have it, there's also an option to use := which will have Godot try to figure out the type of the variable. This is used some later, but figured it was worth mentioning here.
 
