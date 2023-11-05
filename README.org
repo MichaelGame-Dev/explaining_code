@@ -130,7 +130,7 @@ particles_trail
 The model scalling is going from the current scale towards vector3 (1,1,1) which is the normal scale. The next if adjusts it
 
 
-The if here is seeing if the player just landed. the previously_floored is updated multiple times a frame. This is done to make sure it doesn't keep playing the audio and scaling the model. When the if statement condition is true, the model scaling will chanmge and then start lerping back towards 1,1,1. This will also play the audio file land.ogg
+The if here is seeing if the player just landed. the previously_floored is updated multiple times a frame. This is done to make sure it doesn't keep playing the audio and scaling the model. When the if statement condition is true, the model scaling will change scale and then start lerping back towards 1,1,1. This will also play the audio file land.ogg
 
 
 #+begin_src gdscript
