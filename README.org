@@ -1,7 +1,7 @@
 #+title: Gd_script
 
-** Prefer a video? Watch it here:
-[link](https://www.youtube.com/watch?v=I9IA--A56Ik)
+** [https://www.youtube.com/watch?v=I9IA--A56Ik](Prefer a video? Watch it here):
+
 
 * Player.gd
 
