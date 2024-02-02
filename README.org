@@ -1,5 +1,8 @@
 #+title: Gd_script
 
+## Prefer a video? Watch it here:
+{{{imglnk(https://youtu.be/I9IA--A56Ik,https://img.youtube.com/vi/I9IA--A56Ik/default.jpg)}}
+
 * Player.gd
 
 #+begin_src gdscript
