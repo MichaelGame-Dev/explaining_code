@@ -3,7 +3,6 @@
 ** Prefer a video? Watch it here:
 https://www.youtube.com/watch?v=I9IA--A56Ik
 
-
 * Player.gd
 
 #+begin_src gdscript
